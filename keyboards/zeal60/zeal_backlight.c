@@ -22,9 +22,11 @@ zeal_backlight_config g_config = {
 	.disable_when_usb_suspended = BACKLIGHT_DISABLE_WHEN_USB_SUSPENDED,
 	.disable_after_timeout = BACKLIGHT_DISABLE_AFTER_TIMEOUT,
 	.brightness = 255,
-	.effect = 255, // Default to RGB test, so Zeal can flash and test in one pass!
-	.color_1 = { .h = 0, .s = 255, .v = 255 },
-	.color_2 = { .h = 127, .s = 255, .v = 255 },
+	.effect = 2, // Default to RGB test, so Zeal can flash and test in one pass!
+	//.color_1 = { .h = 0, .s = 255, .v = 255 },
+	//.color_2 = { .h = 127, .s = 255, .v = 255 },
+	.color_1 = { .h = 127, .s = 255, .v = 255 },
+	.color_2 = { .h = 255, .s = 255, .v = 255 },
 	.caps_lock_indicator = { .color = { .h = 0, .s = 0, .v = 255 }, .index = 255 },
 	.layer_1_indicator = { .color = { .h = 0, .s = 0, .v = 255 }, .index = 255 },
 	.layer_2_indicator = { .color = { .h = 0, .s = 0, .v = 255 }, .index = 255 },
@@ -368,6 +370,20 @@ void backlight_effect_alphas_mods(void)
 			}
 		}
 	}
+  uint8_t   layer = biton32(layer_state);
+  if(layer == 1	)
+  {
+  	uint8_t index;
+  	map_row_column_to_led( 2, 7, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ 		map_row_column_to_led( 2, 8, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ 		map_row_column_to_led( 2, 9, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ 		map_row_column_to_led( 1, 8, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+  }
+      
 }
 
 void backlight_effect_gradient_up_down(void)
@@ -384,7 +400,7 @@ void backlight_effect_gradient_up_down(void)
 	else if ( deltaH < -127 )
 	{
 		deltaH += 256;
-	}
+																					}
 	// Divide delta by 4, this gives the delta per row
 	deltaH /= 4;
 
@@ -392,7 +408,7 @@ void backlight_effect_gradient_up_down(void)
 	int16_t s2 = g_config.color_2.s;
 	int16_t deltaS = ( s2 - s1 ) / 4;
 
-	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
+	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness }	;
 	RGB rgb;
 	Point point;
 	for ( int i=0; i<72; i++ )
@@ -561,6 +577,21 @@ void backlight_effect_custom(void)
 		rgb = hsv_to_rgb( hsv );
 		backlight_set_color( i, rgb.r, rgb.g, rgb.b );
 	}
+
+	uint8_t   layer = biton32(layer_state);
+  if(layer == 1	)
+  {
+  	RGB rgb2 = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
+  	uint8_t index;
+  	map_row_column_to_led( 2, 7, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ 		map_row_column_to_led( 2, 8, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ 		map_row_column_to_led( 2, 9, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ 		map_row_column_to_led( 1, 8, &index );
+		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+  }
 }
 
 void backlight_effect_indicators_set_colors( uint8_t index, HSV hsv )
