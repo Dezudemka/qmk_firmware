@@ -11,7 +11,7 @@
 #include "zeal_color.h"
 #include "IS31FL3731_driver.h"
 
-#define BACKLIGHT_EFFECT_MAX 9
+#define BACKLIGHT_EFFECT_MAX 11
 
 zeal_backlight_config g_config = {
 	.use_split_backspace = BACKLIGHT_USE_SPLIT_BACKSPACE,
@@ -25,8 +25,8 @@ zeal_backlight_config g_config = {
 	.effect = 2, // Default to RGB test, so Zeal can flash and test in one pass!
 	//.color_1 = { .h = 0, .s = 255, .v = 255 },
 	//.color_2 = { .h = 127, .s = 255, .v = 255 },
-	.color_1 = { .h = 127, .s = 255, .v = 255 },
-	.color_2 = { .h = 255, .s = 255, .v = 255 },
+	.color_1 = { .h = 7, .s = 255, .v = 255 },
+	.color_2 = { .h = 113, .s = 255, .v = 255 },
 	.caps_lock_indicator = { .color = { .h = 0, .s = 0, .v = 255 }, .index = 255 },
 	.layer_1_indicator = { .color = { .h = 0, .s = 0, .v = 255 }, .index = 255 },
 	.layer_2_indicator = { .color = { .h = 0, .s = 0, .v = 255 }, .index = 255 },
@@ -38,6 +38,7 @@ zeal_backlight_config g_config = {
 		BACKLIGHT_ALPHAS_MODS_ROW_3,
 		BACKLIGHT_ALPHAS_MODS_ROW_4 }
 };
+
 
 bool g_suspend_state = false;
 uint8_t g_indicator_state = 0;
@@ -370,8 +371,8 @@ void backlight_effect_alphas_mods(void)
 			}
 		}
 	}
-  uint8_t   layer = biton32(layer_state);
-  if(layer == 1	)
+
+  if(IS_LAYER_ON(1))
   {
   	uint8_t index;
   	map_row_column_to_led( 2, 7, &index );
@@ -383,7 +384,7 @@ void backlight_effect_alphas_mods(void)
  		map_row_column_to_led( 1, 8, &index );
 		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
   }
-      
+
 }
 
 void backlight_effect_gradient_up_down(void)
@@ -400,7 +401,7 @@ void backlight_effect_gradient_up_down(void)
 	else if ( deltaH < -127 )
 	{
 		deltaH += 256;
-																					}
+	}
 	// Divide delta by 4, this gives the delta per row
 	deltaH /= 4;
 
@@ -540,6 +541,145 @@ void backlight_effect_cycle_up_down(void)
 	}
 }
 
+void backlight_effect_cycle_mods(void)
+{
+	uint8_t offset = g_tick & 0xFF;
+	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
+	HSV mods = (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness };
+	RGB rgb;
+	RGB rgbmods;
+	Point point;
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				uint16_t offset2 = g_key_hit[index]<<2;
+				// stabilizer LEDs use spacebar hits
+				if ( index == 36+6 || index == 54+13 || // LC6, LD13
+					( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+				{
+					offset2 = g_key_hit[36+0]<<2;
+				}
+				offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+				HSV tempmods;
+				tempmods.h = mods.h; //+ offset2;
+				tempmods.s = mods.s;
+				tempmods.v = mods.v;
+
+				rgbmods = hsv_to_rgb(tempmods);
+				backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+			}
+			else
+			{
+        uint16_t offset2 = g_key_hit[index]<<2;
+        // stabilizer LEDs use spacebar hits
+        if ( index == 36+6 || index == 54+13 || // LC6, LD13
+          ( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+        {
+          offset2 = g_key_hit[36+0]<<2;
+        }
+        offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+				map_led_to_point( index, &point );
+				// Relies on hue being 8-bit and wrapping
+				hsv.h = point.y + offset +offset2;
+				rgb = hsv_to_rgb( hsv );
+				backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+			}
+		}
+	}
+
+}
+
+void backlight_effect_cycle_alphas(void)
+{
+	uint8_t offset = g_tick & 0xFF;
+	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
+	RGB mods = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
+	RGB rgb;
+	Point point;
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+
+
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+				( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+			map_led_to_point( index, &point );
+		// Relies on hue being 8-bit and wrapping
+			hsv.h = point.y + offset + offset2;
+			rgb = hsv_to_rgb( hsv );
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+			}
+			else
+			{
+				backlight_set_color( index, mods.r, mods.g, mods.b );
+			}
+		}
+	}
+
+}
+
+void backlight_effect_cycle_all_alphas(void)
+{
+			uint8_t offset = g_tick & 0xFF;
+	RGB mods = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+					( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+			HSV hsv = { .h = offset+offset2, .s = 255, .v = g_config.brightness };
+			RGB rgb = hsv_to_rgb( hsv );
+
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+			}
+			else
+			{
+				backlight_set_color( index, mods.r, mods.g, mods.b );
+			}
+		}
+	}
+
+}
+
 void backlight_effect_jellybean_raindrops( bool initialize )
 {
 	HSV hsv;
@@ -578,8 +718,7 @@ void backlight_effect_custom(void)
 		backlight_set_color( i, rgb.r, rgb.g, rgb.b );
 	}
 
-	uint8_t   layer = biton32(layer_state);
-  if(layer == 1	)
+  if(IS_LAYER_ON(1))
   {
   	RGB rgb2 = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
   	uint8_t index;
@@ -745,6 +884,14 @@ ISR(TIMER3_COMPA_vect)
 			backlight_effect_jellybean_raindrops( initialize );
 			break;
 		case 9:
+			backlight_effect_cycle_mods();
+			break;
+		case 10:
+			backlight_effect_cycle_alphas();
+			break;
+		case 11:
+			backlight_effect_cycle_all_alphas();
+			break;
 		default:
 			backlight_effect_custom();
 			break;

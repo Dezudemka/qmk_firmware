@@ -35,6 +35,7 @@ typedef struct
 	uint16_t alphas_mods[5];            // 10 bytes
 } zeal_backlight_config;                // = 36 bytes
 
+
 void backlight_config_set_values(msg_backlight_config_set_values *values);
 void backlight_config_set_alphas_mods( uint16_t *value );
 void backlight_config_load(void);

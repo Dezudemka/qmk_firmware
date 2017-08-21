@@ -79,32 +79,32 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 
-/*bool process_record_user(uint16_t keycode, keyrecord_t *record)
-{
-  uint8_t layer;
-  switch (keycode) {
-    case FOO:
-      if (record->event.pressed) {
-        // Do something when pressed
-      } else {
-        // Do something else when release
-      }
-      return false; // Skip all further processing of this key
-    case KC_ENTER:
-      // Play a tone when enter is pressed
-      if (record->event.pressed) {
-        PLAY_NOTE_ARRAY(tone_qwerty);
-      }
-      return true; // Let QMK send the enter press/release events
-    default:
-      layer = biton32(layer_state);
-      if(layer == 1)
-      {
-        backlight_set_key_color( 2, 7, (HSV) { .h = 10, .s = 255, .v = 255} );
-      }
-      return true; 
-  }
-}*/
+// bool process_record_user(uint16_t keycode, keyrecord_t *record)
+// {
+//   // uint8_t layer;
+//   // switch (keycode) {
+//   //   case FOO:
+//   //     if (record->event.pressed) {
+//   //       // Do something when pressed
+//   //     } else {
+//   //       // Do something else when release
+//   //     }
+//   //     return false; // Skip all further processing of this key
+//   //   case KC_ENTER:
+//   //     // Play a tone when enter is pressed
+//   //     if (record->event.pressed) {
+//   //       PLAY_NOTE_ARRAY(tone_qwerty);
+//   //     }
+//   //     return true; // Let QMK send the enter press/release events
+//   //   default:
+//   //     layer = biton32(layer_state);
+//   //     if(layer == 1)
+//   //     {
+//   //       backlight_set_key_color( 2, 7, (HSV) { .h = 10, .s = 255, .v = 255} );
+//   //     }
+//   //     return true; 
+//   // }
+// }
 
 void dance_layer_caps(qk_tap_dance_state_t *state, void *user_data)
 {
