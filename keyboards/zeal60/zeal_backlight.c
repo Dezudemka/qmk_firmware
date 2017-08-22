@@ -541,13 +541,13 @@ void backlight_effect_cycle_up_down(void)
 	}
 }
 
-void backlight_effect_cycle_mods(void)
+void backlight_effect_cycle_mods(bool reactive)
 {
 	uint8_t offset = g_tick & 0xFF;
 	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
 	HSV mods = (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness };
 	RGB rgb;
-	RGB rgbmods;
+	RGB rgbmods = hsv_to_rgb(mods);
 	Point point;
 
 	for ( int row = 0; row < MATRIX_ROWS; row++ )
@@ -559,22 +559,29 @@ void backlight_effect_cycle_mods(void)
 
 			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
 			{
-				uint16_t offset2 = g_key_hit[index]<<2;
-				// stabilizer LEDs use spacebar hits
-				if ( index == 36+6 || index == 54+13 || // LC6, LD13
-					( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
-				{
-					offset2 = g_key_hit[36+0]<<2;
-				}
-				offset2 = (offset2<=63) ? (63-offset2) : 0;
+        if(reactive)
+        {
+          uint16_t offset2 = g_key_hit[index]<<2;
+          // stabilizer LEDs use spacebar hits
+          if ( index == 36+6 || index == 54+13 || // LC6, LD13
+            ( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+          {
+            offset2 = g_key_hit[36+0]<<2;
+          }
+          offset2 = (offset2<=63) ? (63-offset2) : 0;
 
-				HSV tempmods;
-				tempmods.h = mods.h; //+ offset2;
-				tempmods.s = mods.s;
-				tempmods.v = mods.v;
+          HSV tempmods;
+          tempmods.h = mods.h + offset2;
+          tempmods.s = mods.s;
+          tempmods.v = mods.v;
 
-				rgbmods = hsv_to_rgb(tempmods);
-				backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+          rgbmods = hsv_to_rgb(tempmods);
+          backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+        }
+        else
+        {
+          backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+        }
 			}
 			else
 			{
@@ -589,10 +596,17 @@ void backlight_effect_cycle_mods(void)
 
 				map_led_to_point( index, &point );
 				// Relies on hue being 8-bit and wrapping
-				hsv.h = point.y + offset +offset2;
-				rgb = hsv_to_rgb( hsv );
-				backlight_set_color( index, rgb.r, rgb.g, rgb.b );
-			}
+        if(reactive)
+        {
+          hsv.h = point.y + offset + offset2;
+        }
+        else
+        {
+          hsv.h = point.y + offset;
+        }
+        rgb = hsv_to_rgb( hsv );
+        backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+      }
 		}
 	}
 
@@ -884,14 +898,17 @@ ISR(TIMER3_COMPA_vect)
 			backlight_effect_jellybean_raindrops( initialize );
 			break;
 		case 9:
-			backlight_effect_cycle_mods();
+			backlight_effect_cycle_mods(false);
 			break;
 		case 10:
-			backlight_effect_cycle_alphas();
+      backlight_effect_cycle_mods(true);
 			break;
 		case 11:
-			backlight_effect_cycle_all_alphas();
+      backlight_effect_cycle_alphas();
 			break;
+    case 12:
+      backlight_effect_cycle_all_alphas();
+      break;
 		default:
 			backlight_effect_custom();
 			break;
