@@ -35,11 +35,11 @@
 #define BACKLIGHT_USE_ISO_ENTER 1
 // disable backlight when USB suspended (PC sleep/hibernate/shutdown)
 #undef BACKLIGHT_DISABLE_WHEN_USB_SUSPENDED
-#define BACKLIGHT_DISABLE_WHEN_USB_SUSPENDED 0
+#define BACKLIGHT_DISABLE_WHEN_USB_SUSPENDED 1
 
 // disable backlight after timeout in minutes, 0 = no timeout
 #undef BACKLIGHT_DISABLE_AFTER_TIMEOUT
-#define BACKLIGHT_DISABLE_AFTER_TIMEOUT 0
+#define BACKLIGHT_DISABLE_AFTER_TIMEOUT 45
 
 // These define which keys in the matrix are alphas/mods
 // Used for backlight effects so colors are different for
@@ -56,7 +56,5 @@
 #define BACKLIGHT_ALPHAS_MODS_ROW_3 0b0011000000000001
 #undef BACKLIGHT_ALPHAS_MODS_ROW_4
 #define BACKLIGHT_ALPHAS_MODS_ROW_4 0b0011110000000111
-
-
 
 #endif //CONFIG_USER_H

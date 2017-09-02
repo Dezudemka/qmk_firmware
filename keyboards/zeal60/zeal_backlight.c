@@ -11,7 +11,7 @@
 #include "zeal_color.h"
 #include "IS31FL3731_driver.h"
 
-#define BACKLIGHT_EFFECT_MAX 11
+#define BACKLIGHT_EFFECT_MAX 20
 
 zeal_backlight_config g_config = {
 	.use_split_backspace = BACKLIGHT_USE_SPLIT_BACKSPACE,
@@ -40,6 +40,9 @@ zeal_backlight_config g_config = {
 		BACKLIGHT_ALPHAS_MODS_ROW_4 }
 };
 
+
+int8_t direction[5] = { 1, 1, 1, 1, 1};
+uint8_t actualOffset;
 
 bool g_suspend_state = false;
 uint8_t g_indicator_state = 0;
@@ -148,8 +151,6 @@ void map_led_to_point( uint8_t index, Point *point )
 //
 // Maps switch matrix coordinate (row,col) to LED index
 //
-
-
 #ifdef CONFIG_ZEAL65
 // Note: Left spacebar stab is at 4,3 (LC7)
 // Right spacebar stab is at 4,9 (D14)
@@ -367,7 +368,7 @@ void backlight_effect_alphas_mods(void)
 				}
 				else
 				{
-					backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+				 	backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
 				}
 			}
 		}
@@ -625,8 +626,6 @@ void backlight_effect_cycle_alphas(void)
 	{
 		for ( int column = 0; column < MATRIX_COLS; column++ )
 		{
-
-
 			uint8_t index;
 			map_row_column_to_led( row, column, &index );
 
@@ -658,17 +657,15 @@ void backlight_effect_cycle_alphas(void)
 
 void backlight_effect_cycle_all_alphas(void)
 {
-			uint8_t offset = g_tick & 0xFF;
+	uint8_t offset = g_tick & 0xFF;
 	RGB mods = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
 
 	for ( int row = 0; row < MATRIX_ROWS; row++ )
 	{
 		for ( int column = 0; column < MATRIX_COLS; column++ )
 		{
-
 			uint8_t index;
 			map_row_column_to_led( row, column, &index );
-
 
 			uint16_t offset2 = g_key_hit[index]<<2;
 			// stabilizer LEDs use spacebar hits
@@ -716,6 +713,163 @@ void backlight_effect_jellybean_raindrops( bool initialize )
 
 			rgb = hsv_to_rgb( hsv );
 			backlight_set_color( i, rgb.r, rgb.g, rgb.b );
+		}
+	}
+}
+
+void backlight_effect_cycle_orange_pink(int mode, bool reactive)
+{
+	uint8_t offset = g_tick & 0x7F;
+	HSV rowcolor[5];
+	rowcolor[0] = (HSV){.h = 220, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[1] = (HSV){.h = 236, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[2] = (HSV){.h = 252, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[3] = (HSV){.h =  13, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[4] = (HSV){.h =  28, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	HSV mods = (HSV){.h = 160.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+
+	int16_t h1 = rowcolor[0].h;
+	int16_t h2 = rowcolor[4].h;
+	int16_t deltaH = h2 - h1;
+
+	// Take the shortest path between hues
+	deltaH = 63;
+	// Divide delta by 4, this gives the delta per row
+	deltaH /= 4;
+
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+				( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+		//	map_led_to_point( index, &point );
+			// Relies on hue being 8-bit and wrapping
+		  
+			//hsv.h = point.y + offset + offset2;
+			
+			HSV color1 = mods;
+			HSV tempmods = mods;
+			if (offset <= (0x3f - (row * deltaH)))
+			{
+				color1 = rowcolor[0];
+				color1.h += offset + (row * deltaH);
+			}
+			if ((offset >= (0x40 - (row * deltaH))) && (offset <= (0x7F - (row * deltaH))))
+			{
+				color1 = rowcolor[4];
+				color1.h -= (offset - (0x40 - (row * deltaH)));
+			}
+			if (offset >= (0x7F - (row * deltaH) + 1))
+			{
+				color1 = rowcolor[0];
+				color1.h += offset - (0x7F - (row * deltaH) + 1);
+			}		
+
+			if(reactive)
+			{
+				tempmods.h += offset2;
+				color1.h += offset2;
+			}
+
+			RGB rgbcolor2;
+			RGB rgbcolor1;
+			
+			if(mode == 0)
+			{
+			  rgbcolor2 = hsv_to_rgb(tempmods);
+				rgbcolor1 = hsv_to_rgb(color1);
+			}
+			else
+			{
+				rgbcolor1 = hsv_to_rgb(tempmods);
+				rgbcolor2 = hsv_to_rgb(color1);
+			}
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgbcolor2.r, rgbcolor2.g, rgbcolor2.b );
+			}
+			else
+			{
+				backlight_set_color( index, rgbcolor1.r, rgbcolor1.g, rgbcolor1.b );
+			}
+		}
+	}
+}
+
+void backlight_effect_gradient_orange_pink(int mode, bool reactive)
+{
+	HSV rowcolor[5];
+	rowcolor[0] = (HSV){.h = 310.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[1] = (HSV){.h = 330.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[2] = (HSV){.h = 350.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[3] = (HSV){.h =  10.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[4] = (HSV){.h =  30.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	HSV mods = (HSV){.h = 160.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+					( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+			HSV tempmods;
+			HSV tempalphas;
+
+			switch(mode)
+			{
+				case 0:
+					tempmods = mods;
+					tempalphas = rowcolor[row];
+					break;
+				case 1:
+					tempmods = rowcolor[row];
+					tempalphas = mods;
+					break;
+				case 2:
+					tempmods = rowcolor[row];
+					tempalphas = rowcolor[row];
+					break;
+			}
+
+			if(reactive)
+			{
+				tempmods.h = tempmods.h + offset2;
+				tempalphas.h = tempalphas.h + offset2;
+			}
+
+			RGB rgbmods = hsv_to_rgb(tempmods);
+			RGB rbgalphas = hsv_to_rgb(tempalphas);
+			// TODO: add mode handling (mods, alphas. reactiv etc.)
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+			}
+			else
+			{
+				backlight_set_color( index, rbgalphas.r, rbgalphas.g, rbgalphas.b );
+			}
 		}
 	}
 }
@@ -909,7 +1063,29 @@ ISR(TIMER3_COMPA_vect)
 			break;
     case 12:
       backlight_effect_cycle_all_alphas();
-      break;
+			break;
+		case 13:
+			backlight_effect_gradient_orange_pink(0, true);
+			break;
+		case 14:
+			backlight_effect_gradient_orange_pink(0, false);
+			break;
+		case 15:
+			backlight_effect_gradient_orange_pink(1, true);
+			break;
+		case 16:
+			backlight_effect_gradient_orange_pink(2, true);
+			break;
+		case 17:
+		  backlight_effect_cycle_orange_pink(0, false);
+			break;
+		case 18:
+			backlight_effect_cycle_orange_pink(0, true);
+			break;
+		case 19:
+			backlight_effect_cycle_orange_pink(1, true);
+			break;
+		case 20:
 		default:
 			backlight_effect_custom();
 			break;
