@@ -33,5 +33,15 @@ CMakeLists.txt
 util/Win_Check_Output.txt
 .vscode
 .stfolder
-NUL
-.tags
+
+# ignore image files
+*.png
+*.jpg
+*.gif
+
+# Do not ignore MiniDox left/right hand eeprom files
+!keyboards/minidox/*.eep 
+
+# things travis sees
+secrets.tar
+id_rsa_*
