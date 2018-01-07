@@ -75,7 +75,10 @@ static void layer_state_set(uint32_t state)
     layer_debug(); dprint(" to ");
     layer_state = state;
     layer_debug(); dprintln();
+
+#ifndef PREVENT_STUCK_MODIFIERS
     clear_keyboard_but_mods(); // To avoid stuck keys
+#endif
 }
 
 void layer_clear(void)

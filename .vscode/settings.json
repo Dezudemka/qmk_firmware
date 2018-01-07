@@ -9,6 +9,8 @@
         "*.h": "c",
         "*.c": "c",
         "*.cpp": "cpp",
-        "*.hpp": "cpp"
+        "*.hpp": "cpp",
+        "ios": "c",
+        "xiosbase": "c"
     }
 }
