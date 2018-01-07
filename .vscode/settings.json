@@ -11,6 +11,7 @@
         "*.cpp": "cpp",
         "*.hpp": "cpp",
         "ios": "c",
-        "xiosbase": "c"
+        "xiosbase": "c",
+        "xlocale": "c"
     }
 }
