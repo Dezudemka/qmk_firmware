@@ -20,7 +20,7 @@ Compatible flashers:
 
 * [QMK Toolbox](https://github.com/qmk/qmk_toolbox/releases) (recommended GUI)
 * [dfu-programmer](https://github.com/dfu-programmer/dfu-programmer) / `:dfu` in QMK (recommended command line)
-* [Atmel's Flip](http://www.atmel.com/tools/flip.aspx) (not recommended)
+* [Atmel's Flip](http://www.microchip.com/developmenttools/productdetails.aspx?partno=flip) (not recommended)
 
 Flashing sequence:
 
@@ -77,6 +77,12 @@ Flashing sequence:
 or
 
     make <keyboard>:<keymap>:avrdude
+
+or if you want to flash multiple boards, use the following command
+
+    make <keyboard>:<keymap>:avrdude-loop
+
+When you're done flashing boards, you'll need to hit Ctrl + C or whatever the correct keystroke is for your operating system to break the loop.
 
 ## Halfkay
 

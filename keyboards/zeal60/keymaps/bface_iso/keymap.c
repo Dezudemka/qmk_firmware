@@ -2,7 +2,7 @@
 // drk
 
 #include "zeal60.h"
-#include "zeal_backlight.h"
+//#include "zeal_backlight.h"
 
 // macro defines
 #define BRKO 0
@@ -36,7 +36,7 @@
 // [3,1] is right key of split left-shift (e.g ISO key)
 // [3,13] is right key of split right-shift (e.g. HHKB Fn key)
 
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = 
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] =
 {
     [_DEFAULT] = {
     	{ KC_ESC,   KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,   KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC  },
@@ -44,7 +44,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] =
     	{ MO(_FN1), KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,   KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_NUHS, ___X___  },
         { KC_LSFT,  KC_NUBS, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,   KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT, TT(_SFX) },
         { KC_LCTL,  KC_LGUI, KC_LALT, ___X___, ___X___, ___X___, ___X___, KC_SPC, ___X___, ___X___, KC_RALT, FN_MO13, FN_MO23, KC_RCTL  }
-    	
+
     },
 
     // Fn1 Layer
