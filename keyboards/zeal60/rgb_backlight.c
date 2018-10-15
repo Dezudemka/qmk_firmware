@@ -34,7 +34,7 @@
 #include "drivers/avr/i2c_master.h"
 #include "drivers/issi/is31fl3731.h"
 
-#define BACKLIGHT_EFFECT_MAX 10
+#define BACKLIGHT_EFFECT_MAX 22
 
 backlight_config g_config = {
 	.use_split_backspace = RGB_BACKLIGHT_USE_SPLIT_BACKSPACE,
@@ -671,6 +671,155 @@ void backlight_effect_cycle_up_down(void)
 	}
 }
 
+void backlight_effect_cycle_mods(bool reactive)
+{
+	uint8_t offset = g_tick & 0xFF;
+	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
+	HSV mods = (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness };
+	RGB rgb;
+	RGB rgbmods = hsv_to_rgb(mods);
+	Point point;
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+        if(reactive)
+        {
+          uint16_t offset2 = g_key_hit[index]<<2;
+          // stabilizer LEDs use spacebar hits
+          if ( index == 36+6 || index == 54+13 || // LC6, LD13
+            ( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+          {
+            offset2 = g_key_hit[36+0]<<2;
+          }
+          offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+          HSV tempmods;
+          tempmods.h = mods.h + offset2;
+          tempmods.s = mods.s;
+          tempmods.v = mods.v;
+
+          rgbmods = hsv_to_rgb(tempmods);
+          backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+        }
+        else
+        {
+          backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+        }
+			}
+			else
+			{
+        uint16_t offset2 = g_key_hit[index]<<2;
+        // stabilizer LEDs use spacebar hits
+        if ( index == 36+6 || index == 54+13 || // LC6, LD13
+          ( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+        {
+          offset2 = g_key_hit[36+0]<<2;
+        }
+        offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+				map_led_to_point( index, &point );
+				// Relies on hue being 8-bit and wrapping
+        if(reactive)
+        {
+          hsv.h = point.y + offset + offset2;
+        }
+        else
+        {
+          hsv.h = point.y + offset;
+        }
+        rgb = hsv_to_rgb( hsv );
+        backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+      }
+		}
+	}
+
+}
+
+void backlight_effect_cycle_alphas(void)
+{
+	uint8_t offset = g_tick & 0xFF;
+	HSV hsv = { .h = 0, .s = 255, .v = g_config.brightness };
+	RGB mods = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
+	RGB rgb;
+	Point point;
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+				( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+			map_led_to_point( index, &point );
+		// Relies on hue being 8-bit and wrapping
+			hsv.h = point.y + offset + offset2;
+			rgb = hsv_to_rgb( hsv );
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+			}
+			else
+			{
+				backlight_set_color( index, mods.r, mods.g, mods.b );
+			}
+		}
+	}
+
+}
+
+void backlight_effect_cycle_all_alphas(void)
+{
+	uint8_t offset = g_tick & 0xFF;
+	RGB mods = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+					( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+			HSV hsv = { .h = offset+offset2, .s = 255, .v = g_config.brightness };
+			RGB rgb = hsv_to_rgb( hsv );
+
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgb.r, rgb.g, rgb.b );
+			}
+			else
+			{
+				backlight_set_color( index, mods.r, mods.g, mods.b );
+			}
+		}
+	}
+
+}
+
 void backlight_effect_jellybean_raindrops( bool initialize )
 {
 	HSV hsv;
@@ -692,6 +841,163 @@ void backlight_effect_jellybean_raindrops( bool initialize )
 
 			rgb = hsv_to_rgb( hsv );
 			backlight_set_color( i, rgb.r, rgb.g, rgb.b );
+		}
+	}
+}
+
+void backlight_effect_cycle_orange_pink(int mode, bool reactive)
+{
+	uint8_t offset = ( g_tick << g_config.effect_speed ) & 0x7F;
+	HSV rowcolor[5];
+	rowcolor[0] = (HSV){.h = 220, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[1] = (HSV){.h = 236, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[2] = (HSV){.h = 252, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[3] = (HSV){.h =  13, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[4] = (HSV){.h =  28, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	HSV mods = (HSV){.h = 160.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+
+	int16_t h1 = rowcolor[0].h;
+	int16_t h2 = rowcolor[4].h;
+	int16_t deltaH = h2 - h1;
+
+	// Take the shortest path between hues
+	deltaH = 63;
+	// Divide delta by 4, this gives the delta per row
+	deltaH /= 4;
+
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+				( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+		//	map_led_to_point( index, &point );
+			// Relies on hue being 8-bit and wrapping
+
+			//hsv.h = point.y + offset + offset2;
+
+			HSV color1 = mods;
+			HSV tempmods = mods;
+			if (offset <= (0x3f - (row * deltaH)))
+			{
+				color1 = rowcolor[0];
+				color1.h += offset + (row * deltaH);
+			}
+			if ((offset >= (0x40 - (row * deltaH))) && (offset <= (0x7F - (row * deltaH))))
+			{
+				color1 = rowcolor[4];
+				color1.h -= (offset - (0x40 - (row * deltaH)));
+			}
+			if (offset >= (0x7F - (row * deltaH) + 1))
+			{
+				color1 = rowcolor[0];
+				color1.h += offset - (0x7F - (row * deltaH) + 1);
+			}
+
+			if(reactive)
+			{
+				tempmods.h += offset2;
+				color1.h += offset2;
+			}
+
+			RGB rgbcolor2;
+			RGB rgbcolor1;
+
+			if(mode == 0)
+			{
+			  rgbcolor2 = hsv_to_rgb(tempmods);
+				rgbcolor1 = hsv_to_rgb(color1);
+			}
+			else
+			{
+				rgbcolor1 = hsv_to_rgb(tempmods);
+				rgbcolor2 = hsv_to_rgb(color1);
+			}
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgbcolor2.r, rgbcolor2.g, rgbcolor2.b );
+			}
+			else
+			{
+				backlight_set_color( index, rgbcolor1.r, rgbcolor1.g, rgbcolor1.b );
+			}
+		}
+	}
+}
+
+void backlight_effect_gradient_orange_pink(int mode, bool reactive)
+{
+	HSV rowcolor[5];
+	rowcolor[0] = (HSV){.h = 310.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[1] = (HSV){.h = 330.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[2] = (HSV){.h = 350.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[3] = (HSV){.h =  10.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	rowcolor[4] = (HSV){.h =  30.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+	HSV mods = (HSV){.h = 160.0  / 360.0 * 255.0, .s = 100.0 / 100.0 * 255, .v = g_config.brightness };
+
+	for ( int row = 0; row < MATRIX_ROWS; row++ )
+	{
+		for ( int column = 0; column < MATRIX_COLS; column++ )
+		{
+			uint8_t index;
+			map_row_column_to_led( row, column, &index );
+
+			uint16_t offset2 = g_key_hit[index]<<2;
+			// stabilizer LEDs use spacebar hits
+			if ( index == 36+6 || index == 54+13 || // LC6, LD13
+					( g_config.use_7u_spacebar && index == 54+14 ) ) // LD14
+			{
+				offset2 = g_key_hit[36+0]<<2;
+			}
+			offset2 = (offset2<=63) ? (63-offset2) : 0;
+
+			HSV tempmods;
+			HSV tempalphas;
+
+			switch(mode)
+			{
+				case 0:
+					tempmods = mods;
+					tempalphas = rowcolor[row];
+					break;
+				case 1:
+					tempmods = rowcolor[row];
+					tempalphas = mods;
+					break;
+				case 2:
+					tempmods = rowcolor[row];
+					tempalphas = rowcolor[row];
+					break;
+			}
+
+			if(reactive)
+			{
+				tempmods.h = tempmods.h + offset2;
+				tempalphas.h = tempalphas.h + offset2;
+			}
+
+			RGB rgbmods = hsv_to_rgb(tempmods);
+			RGB rbgalphas = hsv_to_rgb(tempalphas);
+			// TODO: add mode handling (mods, alphas. reactiv etc.)
+			if ( ( g_config.alphas_mods[row] & (1<<column) ) == 0 )
+			{
+				backlight_set_color( index, rgbmods.r, rgbmods.g, rgbmods.b );
+			}
+			else
+			{
+				backlight_set_color( index, rbgalphas.r, rbgalphas.g, rbgalphas.b );
+			}
 		}
 	}
 }
@@ -735,6 +1041,34 @@ void backlight_effect_cycle_radial2(void)
 		backlight_set_color( i, rgb.r, rgb.g, rgb.b );
 	}
 }
+
+//void backlight_effect_custom(void)
+//{
+//	HSV hsv;
+//	RGB rgb;
+//	for ( int i=0; i<72; i++ )
+//	{
+//		backlight_get_key_color(i, &hsv);
+//		// Override brightness with global brightness control
+//		hsv.v = g_config.brightness;
+//		rgb = hsv_to_rgb( hsv );
+//		backlight_set_color( i, rgb.r, rgb.g, rgb.b );
+//	}
+//
+//  if(IS_LAYER_ON(1))
+//  {
+//  	RGB rgb2 = hsv_to_rgb( (HSV){ .h = g_config.color_2.h, .s = g_config.color_2.s, .v = g_config.brightness } );
+ // 	uint8_t index;
+//  	map_row_column_to_led( 2, 7, &index );
+//		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ //		map_row_column_to_led( 2, 8, &index );
+	//	backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ //		map_row_column_to_led( 2, 9, &index );
+//		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+// 		map_row_column_to_led( 1, 8, &index );
+//		backlight_set_color( index, rgb2.r, rgb2.g, rgb2.b );
+ // }
+//}
 
 void backlight_effect_indicators_set_colors( uint8_t index, HSV hsv )
 {
@@ -890,6 +1224,39 @@ ISR(TIMER3_COMPA_vect)
 			backlight_effect_cycle_radial1();
 			break;
 		case 10:
+     backlight_effect_cycle_mods(true);
+			break;
+		case 11:
+      backlight_effect_cycle_alphas();
+			break;
+    case 12:
+      backlight_effect_cycle_all_alphas();
+			break;
+		case 13:
+			backlight_effect_gradient_orange_pink(0, true);
+			break;
+		case 14:
+			backlight_effect_gradient_orange_pink(0, false);
+			break;
+		case 15:
+			backlight_effect_gradient_orange_pink(1, true);
+			break;
+		case 16:
+			backlight_effect_gradient_orange_pink(2, true);
+			break;
+		case 17:
+		  backlight_effect_cycle_orange_pink(0, false);
+			break;
+		case 18:
+			backlight_effect_cycle_orange_pink(0, true);
+			break;
+		case 19:
+			backlight_effect_cycle_orange_pink(1, true);
+			break;
+		case 20:
+			backlight_effect_cycle_radial1();
+			break;
+		case 21:
 			backlight_effect_cycle_radial2();
 			break;
 		default:
